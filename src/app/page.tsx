@@ -134,8 +134,10 @@ export default function Home() {
     if (!user || !db) { setError("Sign in and configure Firebase before saving a learning plan."); return; }
     setPlanBusy(true); setError(""); setFeedback("");
     try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) throw new Error("Your session expired. Sign in again.");
       const response = await fetch("/api/learning-plan", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ subject: planSubject, level, goal: planGoal, durationDays }),
       });
       const data = await response.json();
