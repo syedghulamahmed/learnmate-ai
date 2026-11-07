@@ -31,7 +31,8 @@ Requires Node.js 20.9+ and npm.
 4. Add your OpenAI API key and Firebase Web App configuration.
 5. In Firebase Console, enable **Authentication → Email/Password**.
 6. Create a Cloud Firestore database and publish `firestore.rules`.
-7. Start the app with `npm run dev`.
+7. Create a Firebase service account and add its project ID, client email, and private key to the three server-only `FIREBASE_ADMIN_*` variables. Keep the private key secret.
+8. Start the app with `npm run dev`.
 
 Open http://localhost:3000.
 
@@ -40,6 +41,7 @@ Open http://localhost:3000.
 - `OPENAI_API_KEY`: server-only secret. Never expose it through a `NEXT_PUBLIC_` variable.
 - `OPENAI_MODEL`: model enabled for your API project (default `gpt-4.1-mini`).
 - `NEXT_PUBLIC_FIREBASE_*`: Firebase web-app configuration.
+- `FIREBASE_ADMIN_PROJECT_ID`, `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY`: server-only Firebase Admin service-account credentials for API token verification.
 
 Firebase web configuration is intended for client use; Firestore Security Rules enforce user-level access. Never commit private service-account keys or `.env.local`.
 
@@ -53,7 +55,7 @@ Weak areas are computed from recorded quiz attempts. The app does not invent lea
 ## Important limitations before public deployment
 
 - AI routes currently require server-side rate limiting and abuse protection.
-- The current API routes do not independently verify Firebase ID tokens; protect them with authentication verification and rate limits before exposing them publicly.
+- API routes verify Firebase ID tokens server-side using Firebase Admin. Add rate limiting and abuse monitoring before public deployment.
 - Generated lessons are AI-produced and should be checked against official course material.
 - A Firebase project and OpenAI API credentials are required to run authenticated, persistent, AI-powered features.
 
