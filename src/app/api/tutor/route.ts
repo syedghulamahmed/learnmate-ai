@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getOpenAIClient, openAIModel } from "@/lib/openai";
 import { tutorRequestSchema } from "@/lib/schemas";
+import { verifyRequestUser } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,8 @@ const tutorInstructions = [
 
 export async function POST(request: NextRequest) {
   try {
+    const uid = await verifyRequestUser(request);
+    if (!uid) return NextResponse.json({ error: "Sign in to use the AI tutor." }, { status: 401 });
     const payload = tutorRequestSchema.parse(await request.json());
     const openai = getOpenAIClient();
 
