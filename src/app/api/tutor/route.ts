@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
 
     const response = await openai.responses.create({
       model: openAIModel,
+      max_output_tokens: 1200,
       instructions: tutorInstructions,
       input: [
         `Subject: ${payload.subject}`,
