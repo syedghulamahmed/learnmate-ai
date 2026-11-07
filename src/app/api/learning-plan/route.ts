@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     const openai = getOpenAIClient();
     const response = await openai.responses.create({
       model: openAIModel,
+      max_output_tokens: 5000,
       instructions: [
         "You are LearnMate AI, an expert instructional designer.",
         "Create a practical, progressive learning plan tailored to the learner's subject, level, goal, and available duration.",
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest) {
       ].join(" "),
       input: `Subject: ${input.subject}\nLevel: ${input.level}\nGoal: ${input.goal}\nDuration: ${input.durationDays} days`,
     });
-    const plan = learningPlanSchema.parse(JSON.parse(response.output_text));
+    const jsonText = response.output_text.trim().replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/, "");
+    const plan = learningPlanSchema.parse(JSON.parse(jsonText));
     return NextResponse.json({ plan });
   } catch (error) {
     if (error instanceof ZodError || error instanceof SyntaxError) {
