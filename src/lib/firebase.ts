@@ -11,7 +11,10 @@ const config = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const firebaseConfigured = Boolean(\n  config.apiKey && config.authDomain && config.projectId &&\n  config.storageBucket && config.messagingSenderId && config.appId\n);
+export const firebaseConfigured = Boolean(
+  config.apiKey && config.authDomain && config.projectId &&
+  config.storageBucket && config.messagingSenderId && config.appId
+);
 export const firebaseApp = firebaseConfigured
   ? (getApps().length ? getApp() : initializeApp(config))
   : null;
