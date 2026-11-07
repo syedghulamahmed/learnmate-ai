@@ -1,97 +1,62 @@
 # LearnMate AI
 
-An AI-powered personalized learning assistant built for the Internee.pk Generative AI internship assignment.
+An AI-powered personalized learning assistant for the Internee.pk Generative AI internship assignment.
 
-## Core objectives
+## Implemented
 
-- Explain concepts through an AI tutor adapted to a learner's subject, level, and goals.
-- Generate structured, personalized learning plans.
-- Track lesson completion and learning activity.
-- Identify weak areas from quiz and activity evidence.
-- Recommend focused revision and next steps.
+- Responsive Next.js + TypeScript learning workspace.
+- AI tutor endpoint using the OpenAI Responses API.
+- Email/password registration and sign-in using Firebase Authentication.
+- Personalized lesson-plan generation with schema validation.
+- User-specific plan and quiz persistence in Cloud Firestore.
+- Lesson completion tracking.
+- Multiple-choice knowledge checks with saved scores.
+- Weak-area detection based on actual quiz results (topics below 70% combined accuracy).
+- Firestore rules restricting user records to the authenticated owner.
 
-## Technology
+## Stack
 
-- Next.js App Router + TypeScript
-- OpenAI Responses API (server-side)
-- Firebase Authentication
-- Cloud Firestore
-- Zod request validation
+- Next.js App Router, React, TypeScript
+- OpenAI Node SDK / Responses API
+- Firebase Authentication and Cloud Firestore
+- Zod
 
-## Current implementation status
+## Setup
 
-- [x] Next.js application foundation and responsive dashboard
-- [x] Server-side AI tutor endpoint with request validation
-- [x] Firebase client configuration scaffold
-- [ ] Firebase email/password authentication and protected user data
-- [ ] Personalized lesson-plan generation and persistence
-- [ ] Lesson completion, quizzes, and progress tracking
-- [ ] Evidence-based weak-area analysis and recommendations
-- [ ] Automated tests and production deployment
+Requires Node.js 20.9+ and npm.
 
-Do not treat unchecked items as implemented. Update this list as features are completed and tested.
-
-## Getting started
-
-Requirements: Node.js 20.9+ and npm.
-
-```bash
-npm install
-cp .env.example .env.local
-```
-
-On Windows PowerShell, use `Copy-Item .env.example .env.local`.
-
-Set the environment variables in `.env.local`. Then run:
-
-```bash
-npm run dev
-```
+1. Clone the repository.
+2. Install packages: `npm install`.
+3. Copy `.env.example` to `.env.local`.
+4. Add your OpenAI API key and Firebase Web App configuration.
+5. In Firebase Console, enable **Authentication → Email/Password**.
+6. Create a Cloud Firestore database and publish `firestore.rules`.
+7. Start the app with `npm run dev`.
 
 Open http://localhost:3000.
 
-## Environment variables
+### Environment variables
 
-- `OPENAI_API_KEY`: secret API key; server-side only.
-- `OPENAI_MODEL`: model available to your OpenAI API project (default: `gpt-4.1-mini`).
-- `NEXT_PUBLIC_FIREBASE_*`: Firebase web-app configuration values.
+- `OPENAI_API_KEY`: server-only secret. Never expose it through a `NEXT_PUBLIC_` variable.
+- `OPENAI_MODEL`: model enabled for your API project (default `gpt-4.1-mini`).
+- `NEXT_PUBLIC_FIREBASE_*`: Firebase web-app configuration.
 
-Never prefix the OpenAI API key with `NEXT_PUBLIC_`. Never commit `.env.local`, service-account JSON, or other secrets.
+Firebase web configuration is intended for client use; Firestore Security Rules enforce user-level access. Never commit private service-account keys or `.env.local`.
 
-## Firebase setup
+## Data model
 
-1. Create a Firebase project.
-2. Register a Web App and copy its configuration into `.env.local`.
-3. Enable Email/Password under Authentication providers.
-4. Create a Cloud Firestore database.
-5. Deploy the rules in `firestore.rules` before storing user information.
+- `users/{uid}/plans/{planId}`: generated plan, lesson completion IDs, creation timestamp.
+- `users/{uid}/quizAttempts/{attemptId}`: topic, correct answer count, total questions, timestamp.
 
-The client Firebase configuration is not a substitute for Firestore Security Rules. Every user-owned document must be protected by authenticated UID checks.
+Weak areas are computed from recorded quiz attempts. The app does not invent learning progress.
 
-## Project structure
+## Important limitations before public deployment
 
-```text
-src/
-  app/
-    api/tutor/route.ts
-    globals.css
-    layout.tsx
-    page.tsx
-  lib/
-    firebase.ts
-    openai.ts
-    schemas.ts
-firestore.rules
-```
-
-## Security and reliability
-
-- OpenAI requests execute on the server; the API key is never sent to the browser.
-- API input is validated and length-limited.
-- Configure Firestore rules before enabling persistence.
-- Add authentication checks, rate limiting, abuse monitoring, and usage limits before public production deployment.
-- AI-generated explanations and learning recommendations can be inaccurate; learners should verify important information.
+- AI routes currently require server-side rate limiting and abuse protection.
+- The current API routes do not independently verify Firebase ID tokens; protect them with authentication verification and rate limits before exposing them publicly.
+- Generated lessons are AI-produced and should be checked against official course material.
+- A Firebase project and OpenAI API credentials are required to run authenticated, persistent, AI-powered features.
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT.
