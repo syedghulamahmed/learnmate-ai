@@ -252,7 +252,7 @@ export default function Home() {
           <div className="full"><label htmlFor="question">Your question</label><textarea id="question" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Explain supervised vs. unsupervised learning with practical examples..." minLength={2} maxLength={2000} required /></div>
           <div className="full"><button className="primary" type="submit" disabled={tutorBusy || question.trim().length < 2}>{tutorBusy ? "Preparing explanation..." : "Ask LearnMate"}</button></div>
         </form>
-        {answer && <div className="answer" aria-live="polite"><strong>LearnMate's explanation</strong><br /><br />{answer}</div>}
+        {answer && <div className="answer" aria-live="polite"><strong>LearnMate&apos;s explanation</strong><br /><br />{answer}</div>}
       </section>}
 
       {tab === "planner" && <section className="workspace">
