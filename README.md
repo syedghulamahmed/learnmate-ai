@@ -1,71 +1,79 @@
 # LearnMate AI
 
-An AI-powered personalized learning assistant for the Internee.pk Generative AI internship assignment.
+An AI-powered personalized learning assistant built for the Internee.pk Generative AI internship assignment.
 
-## Implemented
+**Live demo:** https://learnmate-ai-olive.vercel.app  
+**Source code:** https://github.com/syedghulamahmed/learnmate-ai
 
-- Responsive Next.js + TypeScript learning workspace.
-- AI tutor endpoint using the OpenAI Responses API.
-- Email/password registration and sign-in using Firebase Authentication.
-- Personalized lesson-plan generation with schema validation.
-- User-specific plan and quiz persistence in Cloud Firestore.
-- Lesson completion tracking.
+## Features
+
+- Responsive learning workspace built with Next.js and TypeScript.
+- AI tutor powered by the OpenAI Responses API.
+- Firebase email/password registration and sign-in.
+- Personalized lesson-plan generation based on subject, level, goal, and duration.
+- User-specific lesson-plan and quiz persistence in Cloud Firestore.
+- Lesson completion tracking and progress overview.
 - Multiple-choice knowledge checks with saved scores.
-- Weak-area detection based on actual quiz results (topics below 70% combined accuracy).
-- Firestore rules restricting user records to the authenticated owner.
+- Weak-area identification from actual quiz attempts (topics below 70% combined accuracy).
+- Server-side Firebase ID-token verification for AI API routes.
+- Firestore rules scoped to the authenticated user's own records.
 
-## Stack
+## Technology
 
-- Next.js App Router, React, TypeScript
+- Next.js App Router, React 19, TypeScript
 - OpenAI Node SDK / Responses API
-- Firebase Authentication and Cloud Firestore
-- Zod
+- Firebase Authentication, Cloud Firestore, Firebase Admin SDK
+- Zod for request and generated-plan validation
+- Vercel deployment
 
-## Setup
+## Local setup
 
 Requires Node.js 20.9+ and npm.
 
-1. Clone the repository.
-2. Install packages: `npm install`.
+1. Clone this repository.
+2. Install dependencies: `npm install`.
 3. Copy `.env.example` to `.env.local`.
-4. Add your OpenAI API key and Firebase Web App configuration.
+4. Add the OpenAI API key, Firebase Web App configuration, and Firebase Admin service-account credentials.
 5. In Firebase Console, enable **Authentication → Email/Password**.
-6. Create a Cloud Firestore database and publish `firestore.rules`.
-7. Create a Firebase service account and add its project ID, client email, and private key to the three server-only `FIREBASE_ADMIN_*` variables. Keep the private key secret.
-8. Start the app with `npm run dev`.
+6. Create a Cloud Firestore database and publish the included `firestore.rules`.
+7. Start the development server: `npm run dev`.
+8. Open http://localhost:3000.
 
-### Deploy to Vercel
+## Deployment configuration
 
-1. Import this GitHub repository into Vercel.
-2. Keep the framework preset as **Next.js**.
-3. Add every variable from `.env.example` in **Project → Settings → Environment Variables**. Add the OpenAI key and Firebase Admin service-account values only as encrypted server environment variables; do not prefix them with `NEXT_PUBLIC_`.
-4. Add the six `NEXT_PUBLIC_FIREBASE_*` web-app values for the client.
-5. Deploy. After deployment, test registration, sign-in, tutor questions, plan generation, saving quiz scores, and progress persistence.
-6. In Firebase Console, add the deployed Vercel domain to **Authentication → Settings → Authorized domains**.
+The production app is deployed on Vercel at https://learnmate-ai-olive.vercel.app.
 
-Open http://localhost:3000.
+For another deployment:
 
-### Environment variables
+1. Import this GitHub repository into Vercel with the **Next.js** framework preset.
+2. Add all required variables listed in `.env.example` under **Project → Settings → Environment Variables**.
+3. Store OpenAI and Firebase Admin credentials as encrypted server-side variables. Never expose them with a `NEXT_PUBLIC_` prefix.
+4. Publish `firestore.rules` in Firebase Console → Firestore Database → Rules.
+5. Add the deployed hostname (without `https://`) to Firebase Authentication → Settings → Authorized domains.
+6. Redeploy after changing environment variables.
 
-- `OPENAI_API_KEY`: server-only secret. Never expose it through a `NEXT_PUBLIC_` variable.
-- `OPENAI_MODEL`: model enabled for your API project (default `gpt-4.1-mini`).
-- `NEXT_PUBLIC_FIREBASE_*`: Firebase web-app configuration.
-- `FIREBASE_ADMIN_PROJECT_ID`, `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY`: server-only Firebase Admin service-account credentials for API token verification.
+## Environment variables
 
-Firebase web configuration is intended for client use; Firestore Security Rules enforce user-level access. Never commit private service-account keys or `.env.local`.
+- `OPENAI_API_KEY`: server-only OpenAI API secret.
+- `OPENAI_MODEL`: model enabled for your API project (default: `gpt-4.1-mini`).
+- `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`: Firebase Web App configuration.
+- `FIREBASE_ADMIN_PROJECT_ID`, `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY`: server-only Firebase Admin service-account credentials used to verify Firebase ID tokens.
 
-## Data model
+Firebase Web App configuration is designed for client use. Firestore Security Rules enforce per-user data access. Never commit private service-account keys or `.env.local`.
 
-- `users/{uid}/plans/{planId}`: generated plan, lesson completion IDs, creation timestamp.
-- `users/{uid}/quizAttempts/{attemptId}`: topic, correct answer count, total questions, timestamp.
+## Firestore data model
 
-Weak areas are computed from recorded quiz attempts. The app does not invent learning progress.
+- `users/{uid}/plans/{planId}`: generated plan, completed lesson IDs, and creation timestamp.
+- `users/{uid}/quizAttempts/{attemptId}`: lesson topic, correct answer count, total questions, and timestamp.
 
-## Important limitations before public deployment
+Weak areas are computed from recorded quiz attempts; the app does not fabricate learning progress.
 
-- API routes verify Firebase ID tokens server-side using Firebase Admin. Add a shared-store rate limiter (for example, Upstash Redis) and abuse monitoring before opening the service to public traffic.
-- Generated lessons are AI-produced and should be checked against official course material.
-- A Firebase project and OpenAI API credentials are required to run authenticated, persistent, AI-powered features.
+## Scope and limitations
+
+- Lesson plans are AI-generated from user-provided subjects and goals; they are not represented as official Internee.pk curriculum content.
+- AI-generated educational content should be checked against authoritative course material.
+- API routes verify Firebase ID tokens. Before opening the app to significant public traffic, add a shared-store rate limiter and abuse monitoring.
+- Live AI and persistent learning features require valid OpenAI and Firebase credentials.
 
 ## License
 
