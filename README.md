@@ -34,6 +34,15 @@ Requires Node.js 20.9+ and npm.
 7. Create a Firebase service account and add its project ID, client email, and private key to the three server-only `FIREBASE_ADMIN_*` variables. Keep the private key secret.
 8. Start the app with `npm run dev`.
 
+### Deploy to Vercel
+
+1. Import this GitHub repository into Vercel.
+2. Keep the framework preset as **Next.js**.
+3. Add every variable from `.env.example` in **Project → Settings → Environment Variables**. Add the OpenAI key and Firebase Admin service-account values only as encrypted server environment variables; do not prefix them with `NEXT_PUBLIC_`.
+4. Add the six `NEXT_PUBLIC_FIREBASE_*` web-app values for the client.
+5. Deploy. After deployment, test registration, sign-in, tutor questions, plan generation, saving quiz scores, and progress persistence.
+6. In Firebase Console, add the deployed Vercel domain to **Authentication → Settings → Authorized domains**.
+
 Open http://localhost:3000.
 
 ### Environment variables
@@ -54,8 +63,7 @@ Weak areas are computed from recorded quiz attempts. The app does not invent lea
 
 ## Important limitations before public deployment
 
-- AI routes currently require server-side rate limiting and abuse protection.
-- API routes verify Firebase ID tokens server-side using Firebase Admin. Add rate limiting and abuse monitoring before public deployment.
+- API routes verify Firebase ID tokens server-side using Firebase Admin. Add a shared-store rate limiter (for example, Upstash Redis) and abuse monitoring before opening the service to public traffic.
 - Generated lessons are AI-produced and should be checked against official course material.
 - A Firebase project and OpenAI API credentials are required to run authenticated, persistent, AI-powered features.
 
