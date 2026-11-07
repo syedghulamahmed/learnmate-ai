@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { getOpenAIClient, openAIModel } from "@/lib/openai";
 import { learningPlanSchema } from "@/lib/learning";
+import { verifyRequestUser } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,8 @@ const requestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const uid = await verifyRequestUser(request);
+    if (!uid) return NextResponse.json({ error: "Sign in to generate a learning plan." }, { status: 401 });
     const input = requestSchema.parse(await request.json());
     const openai = getOpenAIClient();
     const response = await openai.responses.create({
