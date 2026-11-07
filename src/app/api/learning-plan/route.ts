@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       ].join(" "),
       input: `Subject: ${input.subject}\nLevel: ${input.level}\nGoal: ${input.goal}\nDuration: ${input.durationDays} days`,
     });
-    const jsonText = response.output_text.trim().replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/, "");
+    const jsonText = response.output_text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
     const plan = learningPlanSchema.parse(JSON.parse(jsonText));
     return NextResponse.json({ plan });
   } catch (error) {
