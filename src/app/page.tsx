@@ -117,8 +117,10 @@ export default function Home() {
     event.preventDefault();
     setTutorBusy(true); setError(""); setAnswer("");
     try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) throw new Error("Your session expired. Sign in again.");
       const response = await fetch("/api/tutor", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ question, subject, level, goal }),
       });
       const data = await response.json();
