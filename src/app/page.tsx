@@ -16,7 +16,7 @@ type QuizAttempt = { id: string; topic: string; score: number; total: number; cr
 
 export default function Home() {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [authReady, setAuthReady] = useState(false);
+  const [authReady, setAuthReady] = useState(!auth);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,16 +44,17 @@ export default function Home() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!auth) { setAuthReady(true); return; }
+    if (!auth) return;
     return onAuthStateChanged(auth, (nextUser) => {
       setUser(nextUser);
+      if (!nextUser) { setPlans([]); setAttempts([]); setActivePlanId(""); }
       setAuthReady(true);
     });
   }, []);
 
   useEffect(() => {
     async function loadLearningData() {
-      if (!user || !db) { setPlans([]); setAttempts([]); return; }
+      if (!user || !db) return;
       try {
         const [planSnapshot, attemptSnapshot] = await Promise.all([
           getDocs(collection(db, "users", user.uid, "plans")),
@@ -72,13 +73,13 @@ export default function Home() {
           total: Number(item.data().total || 0),
           createdAt: item.data().createdAt,
         })));
-        if (loadedPlans.length && !activePlanId) setActivePlanId(loadedPlans[0].id);
+        if (loadedPlans.length) setActivePlanId((current) => current || loadedPlans[0].id);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load your learning records.");
       }
     }
     void loadLearningData();
-  }, [user, activePlanId]);
+  }, [user]);
 
   const activePlan = plans.find((item) => item.id === activePlanId) || plans[0] || null;
   const activeLesson = activePlan?.plan.lessons[activeLessonIndex] || null;
