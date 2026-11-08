@@ -60,7 +60,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "The AI returned an invalid plan. Please try again." }, { status: 502 });
     }
 
-    const plan = learningPlanSchema.parse(generated);
+    let plan;
+    try {
+      plan = learningPlanSchema.parse(generated);
+    } catch {
+      return NextResponse.json({ error: "The AI returned a plan with an invalid structure. Please try again." }, { status: 502 });
+    }
     return NextResponse.json({ plan });
   } catch (error) {
     if (error instanceof FirebaseAdminConfigurationError || error instanceof FirebaseAdminVerificationError) {
@@ -68,7 +73,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "The sign-in service is temporarily unavailable. Please try again later." }, { status: 503 });
     }
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: "Invalid learning-plan input or generated plan structure." }, { status: 400 });
+      return NextResponse.json({ error: "Invalid learning-plan input. Check the subject, level, goal, and duration." }, { status: 400 });
     }
     console.error("Learning plan generation failed.");
     return NextResponse.json({ error: "Unable to generate a plan. Please try again shortly." }, { status: 502 });
