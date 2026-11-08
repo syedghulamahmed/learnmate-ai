@@ -14,9 +14,10 @@ const requestSchema = z.object({
 
 async function verifyRequestUser(request: NextRequest): Promise<string | null> {
   const authorization = request.headers.get("authorization") || "";
-  const token = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
+  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
   if (!token || !apiKey) return null;
+
   try {
     const response = await fetch(
       "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(apiKey),
@@ -68,8 +69,8 @@ export async function POST(request: NextRequest) {
       "Do not claim this plan is an official Internee.pk curriculum. Do not invent learner progress.",
     ].join(" ");
 
-    // Put the model that passed the live schema test first. Try the second model
-    // when the provider is unavailable, times out, or returns invalid JSON/schema.
+    // This model passed the live schema test; the second model is the fallback.
+    // Invalid JSON/schema is treated as a failed attempt and also triggers fallback.
     const models = ["poolside/laguna-xs-2.1", "nvidia/nemotron-3.5-bolt"];
     let lastFailure: "unavailable" | "invalid" = "unavailable";
 
@@ -90,7 +91,11 @@ export async function POST(request: NextRequest) {
               },
               {
                 role: "user",
-                content: `Subject: ${input.subject}\\nLevel: ${input.level}\\nGoal: ${input.goal}\\nDuration: ${input.durationDays} days`,
+                content:
+                  "Subject: " + input.subject +
+                  "\nLevel: " + input.level +
+                  "\nGoal: " + input.goal +
+                  "\nDuration: " + input.durationDays + " days",
               },
             ],
           }),
@@ -107,16 +112,14 @@ export async function POST(request: NextRequest) {
         }
 
         try {
-          const generated = JSON.parse(
-            jsonText.replace(/^\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`$/, ""),
-          );
+          const generated = JSON.parse(jsonText.trim());
           const plan = learningPlanSchema.parse(generated);
           return NextResponse.json({ plan, source: "blockrun", model });
         } catch {
           lastFailure = "invalid";
         }
       } catch {
-        // Move to the next model on network errors and provider timeouts.
+        // Continue to the fallback model after network errors or timeouts.
       }
     }
 
