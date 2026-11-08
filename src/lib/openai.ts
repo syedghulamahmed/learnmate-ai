@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
-export function getOpenAIClient() {
-  const apiKey = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
+export function getOpenAIClient(oidcToken?: string) {
+  const apiKey = process.env.AI_GATEWAY_API_KEY || oidcToken;
   if (!apiKey) {
     throw new Error("Vercel AI Gateway credentials are unavailable.");
   }
