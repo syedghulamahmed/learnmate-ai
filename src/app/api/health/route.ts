@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { isFirebaseAdminReady } from "@/lib/firebase-admin";
+
 export const runtime = "nodejs";
+
 export async function GET() {
+  const firebaseAdminReady = isFirebaseAdminReady();
   return NextResponse.json({
     status: "ok",
     service: "learnmate-ai",
     aiConfigured: Boolean(process.env.OPENAI_API_KEY),
-    firebaseAdminConfigured: Boolean(process.env.FIREBASE_ADMIN_PROJECT_ID && process.env.FIREBASE_ADMIN_CLIENT_EMAIL && process.env.FIREBASE_ADMIN_PRIVATE_KEY),
+    firebaseAdminConfigured: firebaseAdminReady,
   });
 }
