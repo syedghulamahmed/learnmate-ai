@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getOpenAIClient, openAIModel } from "@/lib/openai";
 import { tutorRequestSchema } from "@/lib/schemas";
-import { verifyRequestUser } from "@/lib/firebase-admin";
+import { FirebaseAdminConfigurationError, verifyRequestUser } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -18,10 +18,15 @@ const tutorInstructions = [
 export async function POST(request: NextRequest) {
   try {
     const uid = await verifyRequestUser(request);
-    if (!uid) return NextResponse.json({ error: "Sign in to use the AI tutor." }, { status: 401 });
+    if (!uid) {
+      return NextResponse.json(
+        { error: "Your sign-in session could not be verified. Sign out and sign in again." },
+        { status: 401 },
+      );
+    }
+
     const payload = tutorRequestSchema.parse(await request.json());
     const openai = getOpenAIClient();
-
     const response = await openai.responses.create({
       model: openAIModel,
       max_output_tokens: 1200,
@@ -36,8 +41,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ answer: response.output_text });
   } catch (error) {
+    if (error instanceof FirebaseAdminConfigurationError) {
+      console.error("LearnMate Firebase Admin configuration is invalid or incomplete.");
+      return NextResponse.json(
+        { error: "The server's Firebase authentication configuration needs attention. Please try again later." },
+        { status: 503 },
+      );
+    }
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: "Invalid input. Check the question and learning settings." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid input. Check the question and learning settings." },
+        { status: 400 },
+      );
     }
 
     console.error("LearnMate tutor endpoint failed:", error);
