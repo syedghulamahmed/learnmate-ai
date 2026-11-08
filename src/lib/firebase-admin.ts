@@ -21,7 +21,16 @@ function getAdminAuth() {
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n").trim();
 
-  if (!projectId || !clientEmail || !privateKey) {
+  const missing: string[] = [];
+  if (!projectId) missing.push("FIREBASE_ADMIN_PROJECT_ID");
+  if (!clientEmail) missing.push("FIREBASE_ADMIN_CLIENT_EMAIL");
+  if (!privateKey) missing.push("FIREBASE_ADMIN_PRIVATE_KEY");
+  if (missing.length) {
+    console.error("LearnMate Firebase Admin configuration is missing:", missing.join(", "));
+    throw new FirebaseAdminConfigurationError();
+  }
+  if (!privateKey.includes("-----BEGIN PRIVATE KEY-----") || !privateKey.includes("-----END PRIVATE KEY-----")) {
+    console.error("LearnMate Firebase Admin private key is not in service-account PEM format.");
     throw new FirebaseAdminConfigurationError();
   }
 
@@ -30,7 +39,11 @@ function getAdminAuth() {
       credential: cert({ projectId, clientEmail, privateKey }),
     });
     return getAuth(app);
-  } catch {
+  } catch (error) {
+    console.error(
+      "LearnMate Firebase Admin initialization failed:",
+      error instanceof Error ? error.name : "unknown error",
+    );
     throw new FirebaseAdminConfigurationError();
   }
 }
@@ -63,5 +76,15 @@ export async function verifyRequestUser(request: NextRequest): Promise<string | 
 
     console.error("LearnMate Firebase token verification is temporarily unavailable:", code || "unknown error");
     throw new FirebaseAdminVerificationError();
+  }
+}
+
+
+export function isFirebaseAdminReady(): boolean {
+  try {
+    getAdminAuth();
+    return true;
+  } catch {
+    return false;
   }
 }
