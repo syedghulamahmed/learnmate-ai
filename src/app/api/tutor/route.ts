@@ -77,7 +77,7 @@ export async function POST(request: Request) {
         ].join("\n\n"),
       });
       if (response.output_text?.trim()) {
-        return NextResponse.json({ answer: response.output_text, source: "openai" });
+        return NextResponse.json({ answer: response.output_text, source: "vercel-ai-gateway" });
       }
     } catch (error) {
       console.warn("LearnMate AI provider unavailable; using built-in study guide.", error instanceof Error ? error.name : "unknown");
