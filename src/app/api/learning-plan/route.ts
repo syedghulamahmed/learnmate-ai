@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "The AI returned an invalid plan. Please try again." }, { status: 502 });
     }
 
-    let plan;
+    let plan: z.infer<typeof learningPlanSchema>;
     try {
       plan = learningPlanSchema.parse(generated);
     } catch {
