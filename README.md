@@ -1,19 +1,19 @@
 # LearnMate AI
 
-A personalized AI learning workspace for students: tutor explanations, generated learning plans, quizzes, and progress tracking.
+A personalized AI learning workspace for students, combining tutoring, generated lesson plans, quizzes, and progress tracking.
 
 ## Features
-- Adaptive AI tutor: explanations, examples, and practice prompts.
+- Adaptive AI tutor with explanations, examples, and practice prompts.
 - AI-generated learning plans with lessons and multiple-choice quizzes.
 - Firebase email/password sign-in and user-owned Firestore progress.
 - Lesson completion and quiz accuracy tracking.
-- Input validation and explicit AI-provider disclosure in the app.
+- Input validation and honest fallback behavior.
 
 ## Stack
-Next.js, React, TypeScript, Firebase Authentication, Firestore, Zod, Vercel.
+Next.js, React, TypeScript, Firebase Authentication, Cloud Firestore, Zod, Vercel.
 
 ## AI provider
-The tutor and learning-plan routes use the OpenAI-compatible Vireonix endpoint with the public `auto` model. No OpenAI key, Vercel AI Gateway key, or payment card is required. The service is free but subject to per-IP hourly limits and may return HTTP 429 or experience temporary outages; the application displays an honest fallback/error rather than claiming a fallback is AI-generated.
+The tutor and plan generator call BlockRun's OpenAI-compatible chat-completions endpoint using the currently listed free model `nvidia/nemotron-3.5-bolt`, with `poolside/laguna-xs-2.1` as a second free-model fallback. The integration needs no API key, wallet, payment card, or account. Free-model capacity and IP-based limits can change; if inference is unavailable, the app returns a labelled fallback/error instead of misrepresenting it as AI output.
 
 ## Local setup
 1. Use Node.js 20.9+ and npm.
@@ -31,15 +31,15 @@ The tutor and learning-plan routes use the OpenAI-compatible Vireonix endpoint w
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 
-Firebase client configuration is intended for client use; Firestore rules restrict user records to their owner. The learning-plan API verifies the Firebase ID token using the Firebase Identity Toolkit lookup endpoint. No Firebase Admin private key is used by the AI routes.
+The learning-plan API verifies Firebase ID tokens through Firebase Identity Toolkit. No Firebase Admin private key is used by these AI routes.
 
 ## API
 - `POST /api/tutor`: `question`, `subject`, `level`, and `goal`.
 - `POST /api/learning-plan`: authenticated JSON with `subject`, `level`, `goal`, and `durationDays`.
-- `GET /api/health`: application/provider health metadata.
+- `GET /api/health`: application/provider metadata.
 
 ## Privacy and limitations
-Prompts and outputs sent to Vireonix may be retained and used for model training and improvement. The interface links to the provider's terms and tells users not to submit sensitive personal data, secrets, or confidential information. Read https://vireonix.ai/terms before use. The service has no SLA or reserved capacity. AI educational content can be inaccurate and should be checked against course materials. This is not official Internee.pk curriculum content.
+Prompts are routed by BlockRun to the selected model provider. BlockRun states that it does not store or train on prompts; the upstream model provider's terms still apply. The interface links to [BlockRun Privacy](https://blockrun.ai/privacy) and [Terms](https://blockrun.ai/terms). Do not submit sensitive personal data, secrets, or confidential information. The free model pool may be rate-limited or changed without notice. Educational output can be inaccurate and should be checked against course materials. This is not official Internee.pk curriculum content.
 
 ## Firestore data model
 - `users/{uid}/plans/{planId}`: generated plan, completed lesson IDs, and timestamp.
