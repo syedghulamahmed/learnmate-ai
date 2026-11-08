@@ -3,6 +3,7 @@ import { z, ZodError } from "zod";
 import { learningPlanSchema } from "@/lib/learning";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const requestSchema = z.object({
   subject: z.string().trim().min(2).max(100),
@@ -13,7 +14,7 @@ const requestSchema = z.object({
 
 async function verifyRequestUser(request: NextRequest): Promise<string | null> {
   const authorization = request.headers.get("authorization") || "";
-  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
+  const token = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
   if (!token || !apiKey) return null;
   try {
@@ -52,7 +53,10 @@ export async function POST(request: NextRequest) {
     const input = requestSchema.parse(body);
     const uid = await verifyRequestUser(request);
     if (!uid) {
-      return NextResponse.json({ error: "Your sign-in session could not be verified. Sign in again." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Your sign-in session could not be verified. Sign in again." },
+        { status: 401 },
+      );
     }
 
     const system = [
@@ -64,10 +68,14 @@ export async function POST(request: NextRequest) {
       "Do not claim this plan is an official Internee.pk curriculum. Do not invent learner progress.",
     ].join(" ");
 
-    let response: Response | null = null;
-    for (const model of ["nvidia/nemotron-3.5-bolt", "poolside/laguna-xs-2.1"]) {
+    // Put the model that passed the live schema test first. Try the second model
+    // when the provider is unavailable, times out, or returns invalid JSON/schema.
+    const models = ["poolside/laguna-xs-2.1", "nvidia/nemotron-3.5-bolt"];
+    let lastFailure: "unavailable" | "invalid" = "unavailable";
+
+    for (const model of models) {
       try {
-        response = await fetch("https://blockrun.ai/api/v1/chat/completions", {
+        const response = await fetch("https://blockrun.ai/api/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -76,44 +84,58 @@ export async function POST(request: NextRequest) {
             max_tokens: 5000,
             response_format: { type: "json_object" },
             messages: [
-              { role: "system", content: system + " Return only the requested JSON object. Never include hidden reasoning or markdown fences." },
-              { role: "user", content: `Subject: ${input.subject}\nLevel: ${input.level}\nGoal: ${input.goal}\nDuration: ${input.durationDays} days` },
+              {
+                role: "system",
+                content: system + " Return only the requested JSON object. Never include hidden reasoning or markdown fences.",
+              },
+              {
+                role: "user",
+                content: `Subject: ${input.subject}\\nLevel: ${input.level}\\nGoal: ${input.goal}\\nDuration: ${input.durationDays} days`,
+              },
             ],
           }),
           signal: AbortSignal.timeout(28000),
         });
-        if (response.ok) break;
+
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        const jsonText = data?.choices?.[0]?.message?.content;
+        if (typeof jsonText !== "string" || !jsonText.trim()) {
+          lastFailure = "invalid";
+          continue;
+        }
+
+        try {
+          const generated = JSON.parse(
+            jsonText.replace(/^\`\`\`(?:json)?\\s*/i, "").replace(/\\s*\`\`\`$/, ""),
+          );
+          const plan = learningPlanSchema.parse(generated);
+          return NextResponse.json({ plan, source: "blockrun", model });
+        } catch {
+          lastFailure = "invalid";
+        }
       } catch {
-        response = null;
+        // Move to the next model on network errors and provider timeouts.
       }
     }
-    const finalResponse = response;
-    if (!finalResponse || !finalResponse.ok) {
-      return NextResponse.json({ error: "The AI service is temporarily unavailable. Please retry." }, { status: 503 });
-    }
-    const data = await finalResponse.json();
-    const jsonText = data?.choices?.[0]?.message?.content;
-    if (typeof jsonText !== "string" || !jsonText.trim()) {
-      return NextResponse.json({ error: "The AI returned an empty learning plan. Please retry." }, { status: 502 });
-    }
 
-    let generated: unknown;
-    try {
-      generated = JSON.parse(jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
-    } catch {
-      return NextResponse.json({ error: "The AI returned an invalid plan. Please try again." }, { status: 502 });
+    if (lastFailure === "invalid") {
+      return NextResponse.json(
+        { error: "The AI models could not produce a valid learning plan. Please retry." },
+        { status: 502 },
+      );
     }
-
-    let plan: z.infer<typeof learningPlanSchema>;
-    try {
-      plan = learningPlanSchema.parse(generated);
-    } catch {
-      return NextResponse.json({ error: "The AI returned a plan with an invalid structure. Please try again." }, { status: 502 });
-    }
-    return NextResponse.json({ plan, source: "blockrun" });
+    return NextResponse.json(
+      { error: "The AI service is temporarily unavailable. Please retry." },
+      { status: 503 },
+    );
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: "Invalid learning-plan input. Check the subject, level, goal, and duration." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid learning-plan input. Check the subject, level, goal, and duration." },
+        { status: 400 },
+      );
     }
     console.error("Learning plan generation failed.");
     return NextResponse.json({ error: "Unable to generate a plan. Please try again shortly." }, { status: 502 });
