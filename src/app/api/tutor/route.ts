@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { getOpenAIClient, openAIModel } from "@/lib/openai";
 import { tutorRequestSchema } from "@/lib/schemas";
 
 export const runtime = "nodejs";
@@ -64,29 +63,40 @@ export async function POST(request: Request) {
 
     const payload = tutorRequestSchema.parse(body);
     try {
-      const openai = getOpenAIClient(request.headers.get("x-vercel-oidc-token") || undefined);
-      const response = await openai.responses.create({
-        model: openAIModel,
-        max_output_tokens: 1200,
-        instructions: tutorInstructions,
-        input: [
-          "Subject: " + payload.subject,
-          "Learner level: " + payload.level,
-          "Learning goal: " + payload.goal,
-          "Question: " + payload.question,
-        ].join("\n\n"),
+      const response = await fetch("https://vireonix.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "auto",
+          temperature: 0.35,
+          max_tokens: 1400,
+          messages: [
+            { role: "system", content: tutorInstructions },
+            { role: "user", content: [
+              "Subject: " + payload.subject,
+              "Learner level: " + payload.level,
+              "Learning goal: " + payload.goal,
+              "Question: " + payload.question,
+            ].join("\n\n") },
+          ],
+        }),
+        signal: AbortSignal.timeout(25000),
       });
-      if (response.output_text?.trim()) {
-        return NextResponse.json({ answer: response.output_text, source: "vercel-ai-gateway" });
+      if (!response.ok) throw new Error("VIREONIX_REQUEST_FAILED");
+      const data = await response.json();
+      const generated = data?.choices?.[0]?.message?.content;
+      if (typeof generated === "string" && generated.trim()) {
+        return NextResponse.json({ answer: generated.trim(), source: "vireonix" });
       }
+      throw new Error("VIREONIX_EMPTY_RESPONSE");
     } catch (error) {
-      console.warn("LearnMate AI provider unavailable; using built-in study guide.", error instanceof Error ? error.name : "unknown");
+      console.warn("LearnMate AI provider unavailable; using labelled fallback.", error instanceof Error ? error.name : "unknown");
     }
 
     return NextResponse.json({
       answer: builtInTutorAnswer(payload.subject, payload.level, payload.goal, payload.question),
       source: "built-in",
-      notice: "External AI is unavailable. This response uses a limited built-in study guide.",
+      notice: "Live AI is temporarily unavailable. This is a labelled built-in fallback.",
     });
   } catch (error) {
     if (error instanceof ZodError) {
