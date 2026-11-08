@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { getOpenAIClient, openAIModel } from "@/lib/openai";
 import { learningPlanSchema } from "@/lib/learning";
-import { verifyRequestUser } from "@/lib/firebase-admin";
+import {
+  FirebaseAdminConfigurationError,
+  FirebaseAdminVerificationError,
+  verifyRequestUser,
+} from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -15,9 +19,24 @@ const requestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const length = Number(request.headers.get("content-length") || 0);
+    if (length > 16 * 1024) {
+      return NextResponse.json({ error: "Request is too large." }, { status: 413 });
+    }
+
     const uid = await verifyRequestUser(request);
-    if (!uid) return NextResponse.json({ error: "Sign in to generate a learning plan." }, { status: 401 });
-    const input = requestSchema.parse(await request.json());
+    if (!uid) {
+      return NextResponse.json({ error: "Sign in to generate a learning plan." }, { status: 401 });
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
+    }
+
+    const input = requestSchema.parse(body);
     const openai = getOpenAIClient();
     const response = await openai.responses.create({
       model: openAIModel,
@@ -32,14 +51,26 @@ export async function POST(request: NextRequest) {
       ].join(" "),
       input: `Subject: ${input.subject}\nLevel: ${input.level}\nGoal: ${input.goal}\nDuration: ${input.durationDays} days`,
     });
+
     const jsonText = response.output_text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-    const plan = learningPlanSchema.parse(JSON.parse(jsonText));
+    let generated: unknown;
+    try {
+      generated = JSON.parse(jsonText);
+    } catch {
+      return NextResponse.json({ error: "The AI returned an invalid plan. Please try again." }, { status: 502 });
+    }
+
+    const plan = learningPlanSchema.parse(generated);
     return NextResponse.json({ plan });
   } catch (error) {
-    if (error instanceof ZodError || error instanceof SyntaxError) {
-      return NextResponse.json({ error: "The request or generated plan was invalid. Please try again." }, { status: 400 });
+    if (error instanceof FirebaseAdminConfigurationError || error instanceof FirebaseAdminVerificationError) {
+      console.error("LearnMate Firebase authentication service is unavailable.");
+      return NextResponse.json({ error: "The sign-in service is temporarily unavailable. Please try again later." }, { status: 503 });
     }
-    console.error("Learning plan generation failed:", error);
-    return NextResponse.json({ error: "Unable to generate a plan. Check the server configuration and try again." }, { status: 500 });
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: "Invalid learning-plan input or generated plan structure." }, { status: 400 });
+    }
+    console.error("Learning plan generation failed.");
+    return NextResponse.json({ error: "Unable to generate a plan. Please try again shortly." }, { status: 502 });
   }
 }
