@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   addDoc, arrayUnion, collection, doc, getDocs, serverTimestamp, updateDoc,
@@ -16,6 +16,7 @@ type QuizAttempt = { id: string; topic: string; score: number; total: number; cr
 
 export default function Home() {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const authUidRef = useRef<string | null>(null);
   const [authReady, setAuthReady] = useState(!auth);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
@@ -46,13 +47,25 @@ export default function Home() {
   useEffect(() => {
     if (!auth) return;
     return onAuthStateChanged(auth, (nextUser) => {
+      const nextUid = nextUser?.uid || null;
+      if (authUidRef.current !== nextUid) {
+        setPlans([]);
+        setAttempts([]);
+        setActivePlanId("");
+        setActiveLessonIndex(0);
+        setSelectedAnswers({});
+        setAnswer("");
+        setFeedback("");
+        setError("");
+      }
+      authUidRef.current = nextUid;
       setUser(nextUser);
-      if (!nextUser) { setPlans([]); setAttempts([]); setActivePlanId(""); }
       setAuthReady(true);
     });
   }, []);
 
   useEffect(() => {
+    let active = true;
     async function loadLearningData() {
       if (!user || !db) return;
       try {
@@ -60,6 +73,7 @@ export default function Home() {
           getDocs(collection(db, "users", user.uid, "plans")),
           getDocs(collection(db, "users", user.uid, "quizAttempts")),
         ]);
+        if (!active) return;
         const loadedPlans = planSnapshot.docs.map((item) => ({
           id: item.id,
           plan: item.data().plan as LearningPlan,
@@ -75,10 +89,11 @@ export default function Home() {
         })));
         if (loadedPlans.length) setActivePlanId((current) => current || loadedPlans[0].id);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not load your learning records.");
+        if (active) setError(err instanceof Error ? err.message : "Could not load your learning records.");
       }
     }
     void loadLearningData();
+    return () => { active = false; };
   }, [user]);
 
   const activePlan = plans.find((item) => item.id === activePlanId) || plans[0] || null;
