@@ -64,21 +64,29 @@ export async function POST(request: NextRequest) {
       "Do not claim this plan is an official Internee.pk curriculum. Do not invent learner progress.",
     ].join(" ");
 
-    const response = await fetch("https://vireonix.ai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "auto",
-        temperature: 0.25,
-        max_tokens: 6000,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: `Subject: ${input.subject}\nLevel: ${input.level}\nGoal: ${input.goal}\nDuration: ${input.durationDays} days` },
-        ],
-      }),
-      signal: AbortSignal.timeout(45000),
-    });
+    let response: Response | null = null;
+    for (const model of ["nvidia/nemotron-3.5-bolt", "poolside/laguna-xs-2.1"]) {
+      try {
+        response = await fetch("https://blockrun.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model,
+            temperature: 0.25,
+            max_tokens: 5000,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: system + " Return only the requested JSON object. Never include hidden reasoning or markdown fences." },
+              { role: "user", content: `Subject: ${input.subject}\nLevel: ${input.level}\nGoal: ${input.goal}\nDuration: ${input.durationDays} days` },
+            ],
+          }),
+          signal: AbortSignal.timeout(28000),
+        });
+        if (response.ok) break;
+      } catch {
+        response = null;
+      }
+    }
     if (!response.ok) {
       return NextResponse.json({ error: "The AI service is temporarily unavailable. Please retry." }, { status: 503 });
     }
@@ -101,7 +109,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: "The AI returned a plan with an invalid structure. Please try again." }, { status: 502 });
     }
-    return NextResponse.json({ plan, source: "vireonix" });
+    return NextResponse.json({ plan, source: "blockrun" });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json({ error: "Invalid learning-plan input. Check the subject, level, goal, and duration." }, { status: 400 });
