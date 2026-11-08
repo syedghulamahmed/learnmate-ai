@@ -87,10 +87,11 @@ export async function POST(request: NextRequest) {
         response = null;
       }
     }
-    if (!response.ok) {
+    const finalResponse = response;
+    if (!finalResponse || !finalResponse.ok) {
       return NextResponse.json({ error: "The AI service is temporarily unavailable. Please retry." }, { status: 503 });
     }
-    const data = await response.json();
+    const data = await finalResponse.json();
     const jsonText = data?.choices?.[0]?.message?.content;
     if (typeof jsonText !== "string" || !jsonText.trim()) {
       return NextResponse.json({ error: "The AI returned an empty learning plan. Please retry." }, { status: 502 });
