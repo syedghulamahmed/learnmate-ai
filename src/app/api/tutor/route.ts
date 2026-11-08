@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     const payload = tutorRequestSchema.parse(body);
     try {
-      const openai = getOpenAIClient();
+      const openai = getOpenAIClient(request.headers.get("x-vercel-oidc-token") || undefined);
       const response = await openai.responses.create({
         model: openAIModel,
         max_output_tokens: 1200,
