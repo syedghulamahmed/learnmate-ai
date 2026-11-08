@@ -249,6 +249,7 @@ export default function Home() {
         <h1>Learn smarter.<br />Make measurable progress.</h1>
         <p className="sub">A personal tutor, structured learning plans, and progress insights grounded in your actual study activity.</p>
       </section>
+      <p className="muted" role="note">AI questions and learning-plan prompts are processed by Vireonix. Prompts and outputs may be retained and used for model improvement/training; do not submit sensitive personal data, passwords, or confidential information. <a href="https://vireonix.ai/terms" target="_blank" rel="noopener noreferrer">Provider terms</a>.</p>
       <nav className="tabs" aria-label="Learning workspace">
         <button className={tab === "tutor" ? "tab active" : "tab"} onClick={() => setTab("tutor")}>AI Tutor</button>
         <button className={tab === "planner" ? "tab active" : "tab"} onClick={() => setTab("planner")}>Learning Plans</button>
