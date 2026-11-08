@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getOpenAIClient, openAIModel } from "@/lib/openai";
 import { tutorRequestSchema } from "@/lib/schemas";
-import { FirebaseAdminConfigurationError, verifyRequestUser } from "@/lib/firebase-admin";
+import {
+  FirebaseAdminConfigurationError,
+  FirebaseAdminVerificationError,
+  verifyRequestUser,
+} from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -17,6 +21,11 @@ const tutorInstructions = [
 
 export async function POST(request: NextRequest) {
   try {
+    const length = Number(request.headers.get("content-length") || 0);
+    if (length > 16 * 1024) {
+      return NextResponse.json({ error: "Request is too large." }, { status: 413 });
+    }
+
     const uid = await verifyRequestUser(request);
     if (!uid) {
       return NextResponse.json(
@@ -25,7 +34,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const payload = tutorRequestSchema.parse(await request.json());
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
+    }
+
+    const payload = tutorRequestSchema.parse(body);
     const openai = getOpenAIClient();
     const response = await openai.responses.create({
       model: openAIModel,
@@ -39,12 +55,15 @@ export async function POST(request: NextRequest) {
       ].join("\n\n"),
     });
 
+    if (!response.output_text?.trim()) {
+      return NextResponse.json({ error: "The tutor returned an empty response. Please try again." }, { status: 502 });
+    }
     return NextResponse.json({ answer: response.output_text });
   } catch (error) {
-    if (error instanceof FirebaseAdminConfigurationError) {
-      console.error("LearnMate Firebase Admin configuration is invalid or incomplete.");
+    if (error instanceof FirebaseAdminConfigurationError || error instanceof FirebaseAdminVerificationError) {
+      console.error("LearnMate Firebase authentication service is unavailable.");
       return NextResponse.json(
-        { error: "The server's Firebase authentication configuration needs attention. Please try again later." },
+        { error: "The sign-in service is temporarily unavailable. Please try again later." },
         { status: 503 },
       );
     }
@@ -55,10 +74,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error("LearnMate tutor endpoint failed:", error);
+    console.error("LearnMate tutor endpoint failed.");
     return NextResponse.json(
-      { error: "The tutor could not respond. Check the server configuration and try again." },
-      { status: 500 },
+      { error: "The tutor could not respond. Please try again shortly." },
+      { status: 502 },
     );
   }
 }
