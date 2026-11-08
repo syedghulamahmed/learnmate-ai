@@ -29,7 +29,7 @@ function getAdminAuth() {
     console.error("LearnMate Firebase Admin configuration is missing:", missing.join(", "));
     throw new FirebaseAdminConfigurationError();
   }
-  if (!privateKey.includes("-----BEGIN PRIVATE KEY-----") || !privateKey.includes("-----END PRIVATE KEY-----")) {
+  if (!privateKey || !privateKey.includes("-----BEGIN PRIVATE KEY-----") || !privateKey.includes("-----END PRIVATE KEY-----")) {
     console.error("LearnMate Firebase Admin private key is not in service-account PEM format.");
     throw new FirebaseAdminConfigurationError();
   }
