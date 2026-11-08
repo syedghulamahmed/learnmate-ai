@@ -7,7 +7,7 @@ export async function GET() {
     status: "ok",
     service: "learnmate-ai",
     aiProviderConfigured: true,
-    aiProvider: "vireonix",
+    aiProvider: "blockrun",
     tutorFallbackAvailable: true,
     firebaseAdminRequiredForTutor: false,
   });
