@@ -63,34 +63,42 @@ export async function POST(request: Request) {
 
     const payload = tutorRequestSchema.parse(body);
     try {
-      const response = await fetch("https://vireonix.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "auto",
-          temperature: 0.35,
-          max_tokens: 1400,
-          messages: [
-            { role: "system", content: tutorInstructions },
-            { role: "user", content: [
-              "Subject: " + payload.subject,
-              "Learner level: " + payload.level,
-              "Learning goal: " + payload.goal,
-              "Question: " + payload.question,
-            ].join("\n\n") },
-          ],
-        }),
-        signal: AbortSignal.timeout(25000),
-      });
-      if (!response.ok) throw new Error("VIREONIX_REQUEST_FAILED");
+      let response: Response | null = null;
+      for (const model of ["nvidia/nemotron-3.5-bolt", "poolside/laguna-xs-2.1"]) {
+        try {
+          response = await fetch("https://blockrun.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model,
+              temperature: 0.35,
+              max_tokens: 1400,
+              messages: [
+                { role: "system", content: tutorInstructions + " Answer directly. Never expose hidden reasoning or internal analysis." },
+                { role: "user", content: [
+                  "Subject: " + payload.subject,
+                  "Learner level: " + payload.level,
+                  "Learning goal: " + payload.goal,
+                  "Question: " + payload.question,
+                ].join("\n\n") },
+              ],
+            }),
+            signal: AbortSignal.timeout(22000),
+          });
+          if (response.ok) break;
+        } catch {
+          response = null;
+        }
+      }
+      if (!response?.ok) throw new Error("BLOCKRUN_REQUEST_FAILED");
       const data = await response.json();
       const generated = data?.choices?.[0]?.message?.content;
       if (typeof generated === "string" && generated.trim()) {
-        return NextResponse.json({ answer: generated.trim(), source: "vireonix" });
+        return NextResponse.json({ answer: generated.trim(), source: "blockrun" });
       }
-      throw new Error("VIREONIX_EMPTY_RESPONSE");
+      throw new Error("BLOCKRUN_EMPTY_RESPONSE");
     } catch (error) {
-      console.warn("LearnMate AI provider unavailable; using labelled fallback.", error instanceof Error ? error.name : "unknown");
+      console.warn("LearnMate BlockRun inference unavailable; using labelled fallback.", error instanceof Error ? error.name : "unknown");
     }
 
     return NextResponse.json({
