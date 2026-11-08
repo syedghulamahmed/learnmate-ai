@@ -46,3 +46,6 @@ Prompts are routed by BlockRun to the selected model provider. BlockRun states t
 - `users/{uid}/quizAttempts/{attemptId}`: topic, score, total, and timestamp.
 
 MIT License.
+## Production verification
+
+The tutor and learning-plan handlers use BlockRun's free-model endpoint. The learning-plan endpoint validates Firebase ID tokens, then validates the generated plan against the application schema before saving it to the signed-in user's workspace. If the provider is unavailable, the API returns a clear service error or labelled fallback; a rules-based answer is never marked as AI output.
