@@ -1,5 +1,10 @@
 # LearnMate AI
 
+## Live demo
+
+[Open the deployed application](https://learnmate-ai-olive.vercel.app)
+
+
 A personalized AI learning workspace for students, combining tutoring, generated lesson plans, quizzes, and progress tracking.
 
 ## Features
