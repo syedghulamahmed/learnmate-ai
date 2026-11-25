@@ -39,8 +39,8 @@ The tutor and plan generator call BlockRun's OpenAI-compatible chat-completions 
 The learning-plan API verifies Firebase ID tokens through Firebase Identity Toolkit. No Firebase Admin private key is used by these AI routes.
 
 ## API
-- `POST /api/tutor`: `question`, `subject`, `level`, and `goal`.
-- `POST /api/learning-plan`: authenticated JSON with `subject`, `level`, `goal`, and `durationDays`.
+- `POST /api/tutor`: `question`, `subject`, `level`, and `goal`; requires `Authorization: Bearer <Firebase ID token>` from a signed-in user.
+- `POST /api/learning-plan`: authenticated JSON with `subject`, `level`, `goal`, and `durationDays`; the API verifies the Firebase ID token before calling the model.
 - `GET /api/health`: application/provider metadata.
 
 ## Privacy and limitations
@@ -53,4 +53,4 @@ Prompts are routed by BlockRun to the selected model provider. BlockRun states t
 MIT License.
 ## Production verification
 
-The tutor and learning-plan handlers use BlockRun's free-model endpoint. The learning-plan endpoint validates Firebase ID tokens, then validates the generated plan against the application schema before saving it to the signed-in user's workspace. If the provider is unavailable, the API returns a clear service error or labelled fallback; a rules-based answer is never marked as AI output.
+The tutor and learning-plan handlers verify a Firebase ID token before calling BlockRun's free-model endpoint. The learning-plan endpoint validates Firebase ID tokens, then validates the generated plan against the application schema before saving it to the signed-in user's workspace. If the provider is unavailable, the API returns a clear service error or labelled fallback; a rules-based answer is never marked as AI output.
