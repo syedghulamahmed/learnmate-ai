@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 import { learningPlanSchema } from "@/lib/learning";
+import { verifyFirebaseRequestUser } from "@/lib/firebase-token";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -12,30 +13,6 @@ const requestSchema = z.object({
   durationDays: z.number().int().min(3).max(30),
 });
 
-async function verifyRequestUser(request: NextRequest): Promise<string | null> {
-  const authorization = request.headers.get("authorization") || "";
-  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  if (!token || !apiKey) return null;
-
-  try {
-    const response = await fetch(
-      "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(apiKey),
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: token }),
-        signal: AbortSignal.timeout(10000),
-      },
-    );
-    if (!response.ok) return null;
-    const data = await response.json();
-    const uid = data?.users?.[0]?.localId;
-    return typeof uid === "string" && uid ? uid : null;
-  } catch {
-    return null;
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const input = requestSchema.parse(body);
-    const uid = await verifyRequestUser(request);
+    const uid = await verifyFirebaseRequestUser(request);
     if (!uid) {
       return NextResponse.json(
         { error: "Your sign-in session could not be verified. Sign in again." },
