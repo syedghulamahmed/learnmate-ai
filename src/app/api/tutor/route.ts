@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { tutorRequestSchema } from "@/lib/schemas";
+import { verifyFirebaseRequestUser } from "@/lib/firebase-token";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,13 @@ function builtInTutorAnswer(subject: string, level: string, goal: string, questi
 
 export async function POST(request: Request) {
   try {
+    if (!(await verifyFirebaseRequestUser(request))) {
+      return NextResponse.json(
+        { error: "Your sign-in session could not be verified. Sign in again." },
+        { status: 401 },
+      );
+    }
+
     const length = Number(request.headers.get("content-length") || 0);
     if (length > 16 * 1024) return NextResponse.json({ error: "Request is too large." }, { status: 413 });
 
