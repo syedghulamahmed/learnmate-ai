@@ -5,7 +5,7 @@
  */
 export async function verifyFirebaseRequestUser(request: Request): Promise<string | null> {
   const authorization = request.headers.get("authorization") || "";
-  const token = authorization.match(/^Bearer\\s+(.+)$/i)?.[1]?.trim();
+  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 
   if (!token || token.length > 8192 || !apiKey) return null;
